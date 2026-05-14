@@ -1,0 +1,26 @@
+name: Deploy to VPS
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+        run: |
+          echo "$VPS_SSH_PRIVATE_KEY" > /tmp/gha_key
+          chmod 600 /tmp/gha_key
+          ssh -i /tmp/gha_key -o StrictHostKeyChecking=no "admin@$VPS_HOST" '
+            set -euo pipefail
+            if [ -d /home/admin/bdoffset/.git ]; then
+              git -C /home/admin/bdoffset pull origin main
+            else
+              gh repo clone iswong/bdoffset /home/admin/bdoffset
+            fi
+            cd /home/admin/bdoffset && uv tool install --force .
+          '
